@@ -1,3 +1,3 @@
 describe('gulp-remember-cache', function() {
-  var subject = proxyquire('../../lib/gulp-remember-cache');
+  var subject = require('../../lib/gulp-remember-cache');
 });
