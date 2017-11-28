@@ -2,14 +2,9 @@ var gulp = require('gulp');
 var config = require('./config');
 
 gulp.task('watch', function() {
-  gulp.watch(config.lib.concat(config.tests.unit).concat(config.tests.integration), ['unit', 'int']);
+  gulp.watch([...config.lib, ...config.tests], gulp.series('lint', 'mocha'));
 });
 
-gulp.task('watch:unit', function() {
-  gulp.watch(config.lib.concat(config.tests.unit), ['unit']);
+gulp.task('watch:test', function() {
+  gulp.watch([...config.lib, ...config.tests], gulp.series('test'));
 });
-
-gulp.task('watch:int', function() {
-  gulp.watch(config.lib.concat(config.tests.integration), ['int']);
-});
-

@@ -1,8 +1,7 @@
-var gulp = require('gulp');
-var open = require('gulp-open');
+const gulp = require('gulp');
+const open = require('opn');
 
 gulp.task('open', function() {
-  return gulp.src('./coverage/lcov-report/index.html')
-    .pipe(open());
+  return open('./coverage/lcov-report/index.html');
 });
 
