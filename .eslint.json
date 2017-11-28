@@ -78,13 +78,12 @@
     "no-tabs": "error",
     "no-whitespace-before-property": "error",
     "object-curly-newline": ["error", {
-      "minProperties": 2
+      "minProperties": 3
     }],
     "object-curly-spacing": ["error", "always", {
       "arraysInObjects": false,
       "objectsInObjects": false
     }],
-    "object-property-newline": "error",
     "semi": ["error", "always", {
       "omitLastInOneLineBlock": true
     }],
