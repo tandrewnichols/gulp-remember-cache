@@ -1,1 +1,1 @@
-banana
+let banana;
