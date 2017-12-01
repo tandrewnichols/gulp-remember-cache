@@ -15,7 +15,8 @@ ratings:
 exclude_paths:
   - "dist/**.js"
   - "gulp/**.js"
-  - "test/**.*"
+  - "test/**.js"
+  - "test/fixtures/**.js"
   - "**.json"
   - "**.md"
   - "*.js"
