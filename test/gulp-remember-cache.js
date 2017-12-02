@@ -55,8 +55,7 @@ describe('gulp-remember-cache', () => {
         afterEach(() => {
           remember.resetAll();
           return Promise.all([
-            fs.remove('./test/out/apple.js'),
-            fs.remove('./test/out/banana.js'),
+            fs.remove('./test/out'),
             fs.remove('./.gulp-remember-cache.json')
           ]);
         });
@@ -87,8 +86,7 @@ describe('gulp-remember-cache', () => {
       afterEach(() => {
         remember.resetAll();
         return Promise.all([
-          fs.remove('./test/out/apple.js'),
-          fs.remove('./test/out/banana.js'),
+          fs.remove('./test/out'),
           fs.remove('./.gulp-remember-cache.json'),
           fs.remove('./.gulp-cache')
         ]);
