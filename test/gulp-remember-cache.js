@@ -105,14 +105,10 @@ describe('gulp-remember-cache', () => {
             }));
         };
         run(2);
-        console.log(process.cwd());
-        let watcher = gulp.watch(`${__dirname}/fixtures/**/*`, { delay: 0 }, (event) => {
-          console.log('closing watcher');
-          watcher.close();
-          return run(1).pipe(assert.end(done));
-        });
         touch(`${__dirname}/fixtures/apple.js`, () => {
-          console.log('touch called');
+          setTimeout(() => {
+            run(1).pipe(assert.end(done));
+          }, 1000);
         });
       });
 
