@@ -10,8 +10,8 @@ const read = require('gulp-read');
 const touch = require('touch');
 const debug = require('gulp-debug');
 
-const noop = () => {
-
+const noop = (err) => {
+  console.log(err);
 };
 
 describe('gulp-remember-cache', () => {
@@ -110,7 +110,6 @@ describe('gulp-remember-cache', () => {
             }));
 
           if (finish) {
-            console.log('finished');
             // Second time, close the pipe and the watcher so the tests
             // don't time out.
             stream.pipe(assert.end(done));
