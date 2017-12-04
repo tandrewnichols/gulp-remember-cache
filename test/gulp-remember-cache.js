@@ -10,10 +10,6 @@ const read = require('gulp-read');
 const touch = require('touch');
 const debug = require('gulp-debug');
 
-const noop = (err) => {
-
-};
-
 describe('gulp-remember-cache', () => {
   const remember = require('../lib/gulp-remember-cache');
 
@@ -94,9 +90,8 @@ describe('gulp-remember-cache', () => {
       });
 
       beforeEach(function(done) {
-        let watcher;
-        let run = (expectedFiles, finish) => {
-          let stream = gulp.src(`${__dirname}/fixtures/**/*`, { read: false })
+        let run = (expectedFiles) => {
+          return gulp.src(`${__dirname}/fixtures/**/*`, { read: false })
             .pipe(cache.filter())
             .pipe(assert.length(expectedFiles))
             .pipe(read())
@@ -108,21 +103,16 @@ describe('gulp-remember-cache', () => {
             .pipe(assert.second((file) => {
               file.contents.toString().should.eql(';(function() { let banana;\n })();');
             }));
-
-          if (finish) {
-            // Second time, close the pipe and the watcher so the tests
-            // don't time out.
-            stream.pipe(assert.end(done));
-            watcher.close();
-          }
-
-          return stream;
         };
         run(2);
-        watcher = gulp.watch(`${__dirname}/fixtures/**/*`, { delay: 0 }, (event) => {
-          return run(1, true);
+        let watcher = gulp.watch(`${__dirname}/fixtures/**/*`, { delay: 0 }, (event) => {
+          console.log('closing watcher');
+          watcher.close();
+          return run(1).pipe(assert.end(done));
         });
-        touch(`${__dirname}/fixtures/apple.js`, noop);
+        touch(`${__dirname}/fixtures/apple.js`, () => {
+
+        });
       });
 
       it('should write files to dest', () => {
