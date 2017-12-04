@@ -104,11 +104,12 @@ describe('gulp-remember-cache', () => {
               file.contents.toString().should.eql(';(function() { let banana;\n })();');
             }));
         };
-        run(2);
+        let stream = run(2);
         touch(`${__dirname}/fixtures/apple.js`, () => {
-          setTimeout(() => {
+          stream.resume();
+          stream.on('end', () => {
             run(1).pipe(assert.end(done));
-          }, 1000);
+          });
         });
       });
 
