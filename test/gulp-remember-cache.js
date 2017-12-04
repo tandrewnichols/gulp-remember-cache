@@ -11,7 +11,7 @@ const touch = require('touch');
 const debug = require('gulp-debug');
 
 const noop = (err) => {
-  console.log(err);
+
 };
 
 describe('gulp-remember-cache', () => {
@@ -115,9 +115,13 @@ describe('gulp-remember-cache', () => {
             stream.pipe(assert.end(done));
             watcher.close();
           }
+
+          return stream;
         };
         run(2);
-        watcher = gulp.watch(`${__dirname}/fixtures/**/*`, run.bind(null, 1, true));
+        watcher = gulp.watch(`${__dirname}/fixtures/**/*`, { delay: 0 }, (event) => {
+          return run(1, true);
+        });
         touch(`${__dirname}/fixtures/apple.js`, noop);
       });
 
