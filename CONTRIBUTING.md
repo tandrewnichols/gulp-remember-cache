@@ -4,7 +4,7 @@ First, contributions are welcome! I expect smaller requests to be handled withou
 
 ## Style
 
-Please try to adhere, as close as possible, to the style and structure already present in this repository. Please don't be offended if I ask you clean something up, as consistency is important. Some general style guides:
+Please try to adhere, as close as possible, to the style and structure already present in this repository. Please don't be offended if I ask you clean something up, as consistency is important. Please see the `.eslint.json` config for a comprehensive style guide. Some of the more salient points follow:
 
 1. Two spaces. No literal tabs.
 2. "Cuddled" elses and else ifs: e.g. `} else {`
@@ -67,8 +67,6 @@ Please try to adhere, as close as possible, to the style and structure already p
 11. Be DRY. If you find yourself reusing code, pull it out into a separate function.
 12. No coffeescript, typescript, or flow. I like javascript the way it is. Please do use es6 features if you like though.
 13. Please comment where appropriate. When in doubt, add a comment. I'm finding more and more that things that seem self-documenting when I write them are actually semi-incomprehensible when I read them. Inline comments are fine most of the time, though jsdoc style block comments before functions are nice too.
-
-Have a look at the `.eslint.json` config for more.
 
 ## Testing
 
