@@ -13,11 +13,13 @@ ratings:
    paths:
     - "lib/**.js"
 exclude_paths:
+  - "*.yml"
   - "dist/**.js"
   - "gulp/**.js"
   - "test/**.js"
   - "test/fixtures/**.js"
-  - "**.json"
+  - "*.json"
+  - ".gitignore"
   - "**.md"
   - "*.js"
   - "**.coffee"
