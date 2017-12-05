@@ -1,4 +1,4 @@
-engines:
+plugins:
   eslint:
     enabled: true
     channel: "eslint-3"
@@ -9,10 +9,7 @@ engines:
     config:
       languages:
         - javascript
-ratings:
-   paths:
-    - "lib/**.js"
-exclude_paths:
+exclude_patterns:
   - "*.yml"
   - "dist/**.js"
   - "gulp/**.js"
