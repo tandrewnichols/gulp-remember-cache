@@ -10,12 +10,11 @@ plugins:
       languages:
         - javascript
 exclude_patterns:
-  - "*.yml"
+  - ".*.*"
   - "dist/**.js"
   - "gulp/**.js"
   - "test/**.js"
   - "test/fixtures/**.js"
-  - "*.json"
   - ".gitignore"
   - "**.md"
   - "*.js"
