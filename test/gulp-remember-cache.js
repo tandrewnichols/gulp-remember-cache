@@ -4,6 +4,7 @@ const header = require('gulp-header');
 const footer = require('gulp-footer');
 const fs = require('fs-extra');
 const path = require('path');
+const root = path.resolve(__dirname, '..');
 const FileCache = require('gulp-file-cache');
 const cache = new FileCache()
 const read = require('gulp-read');
@@ -12,7 +13,7 @@ const touch = require('touch');
 describe('gulp-remember-cache', () => {
   const remember = require('../lib/gulp-remember-cache');
 
-  const getManifest = () => JSON.parse(fs.readFileSync(('./.gulp-remember-cache.json')));
+  const getManifest = () => JSON.parse(fs.readFileSync(`${root}/.gulp-remember-cache.json`));
 
   describe('remember()', () => {
     context('on the first pass', () => {
@@ -20,9 +21,8 @@ describe('gulp-remember-cache', () => {
         afterEach(() => {
           remember.resetAll();
           return Promise.all([
-            fs.remove('./lib/apple.js'),
-            fs.remove('./lib/banana.js'),
-            fs.remove('./.gulp-remember-cache.json')
+            fs.remove(`${root}/out`),
+            fs.remove(`${root}/.gulp-remember-cache.json`)
           ]);
         });
 
@@ -37,13 +37,13 @@ describe('gulp-remember-cache', () => {
 
         it('should write files to dest', () => {
           let manifest = getManifest();
-          let apple = fs.readFileSync('./lib/apple.js', { encoding: 'utf8' });
-          let banana = fs.readFileSync('./lib/banana.js', { encoding: 'utf8' });
+          let apple = fs.readFileSync(`${root}/out/apple.js`, { encoding: 'utf8' });
+          let banana = fs.readFileSync(`${root}/out/banana.js`, { encoding: 'utf8' });
 
           apple.should.eql(';(function() { let apple;\n })();');
           banana.should.eql(';(function() { let banana;\n })();');
-          manifest.cache['apple.js'].should.eql(path.resolve('lib/apple.js'));
-          manifest.cache['banana.js'].should.eql(path.resolve('lib/banana.js'));
+          manifest.cache['apple.js'].should.eql(`${root}/out/apple.js`);
+          manifest.cache['banana.js'].should.eql(`${root}/out/banana.js`);
         });
       });
 
@@ -52,7 +52,7 @@ describe('gulp-remember-cache', () => {
           remember.resetAll();
           return Promise.all([
             fs.remove('./test/out'),
-            fs.remove('./.gulp-remember-cache.json')
+            fs.remove(`${root}/.gulp-remember-cache.json`)
           ]);
         });
 
@@ -83,7 +83,7 @@ describe('gulp-remember-cache', () => {
         remember.resetAll();
         return Promise.all([
           fs.remove('./test/out'),
-          fs.remove('./.gulp-remember-cache.json'),
+          fs.remove(`${root}/.gulp-remember-cache.json`),
           fs.remove('./.gulp-cache')
         ]);
       });
