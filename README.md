@@ -37,17 +37,21 @@ In order to make disk caching work, `gulp-remember-cache` has to output the file
 #### options.cacheName
 The name of the cache to write files to (default: "cache").
 
-### remember.forget(cacheName, file)
+### remember.forget([cacheName], file, done)
 
-Remove a file from a cache
+Remove a file from a cache and delete the temporary file from disk.
 
 #### cacheName
 
-The cache in which the file is found
+The cache in which the file is found (default: "cache")
 
 #### file
 
 The relative filename of the file to forget. I.e. if you're not using the `base` option to `gulp.src`, the part of the filename corresponding to a glob, or the path relative to the baes if you are. E.g.
+
+#### done
+
+A callback to call on completion.
 
 ```javascript
 gulp.src('files/**/*.js'); // file name is relative to files/
@@ -55,17 +59,25 @@ gulp.src('files/**/*.js'); // file name is relative to files/
 gulp.src('files/foo/bar/**/*.js', { base: 'files/foo' }); // file name is relative to files/foo/
 ```
 
-### remember.reset([cacheName])
+### remember.reset([cacheName], done)
 
-Forget all files from `cacheName`.
+Forget all files from `cacheName` and remove all temporary files in that cache from disk.
 
 #### cacheName
 
 The cache to reset (default: "cache")
 
-### remember.resetAll()
+#### done
 
-Reset the all caches. You probably won't need this.
+A callback to call on completion.
+
+### remember.resetAll(done)
+
+Reset the all caches and delete all temporary files associated with all caches.
+
+#### done
+
+A callback to call on completion.
 
 ## Example
 
