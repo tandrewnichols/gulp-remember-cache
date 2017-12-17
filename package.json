@@ -1,7 +1,7 @@
 {
   "name": "gulp-remember-cache",
   "description": "A gulp-remember for on disk caching.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "lib/gulp-remember-cache.js",
   "scripts": {
     "test": "gulp",
