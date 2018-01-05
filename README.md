@@ -33,15 +33,37 @@ Remember the files in the current stream.
 
 #### options.dest
 
+Since: **v0.0.1**
+
 In order to make disk caching work, `gulp-remember-cache` has to output the files it sees to an intermediate directory. The default is an `out/` directory in the root of the `gulp-remember-cache` module (e.g. `node_modules/gulp-remember-cache/out/`), but you can configure this with the `dest` option. Note that this is treated relative to `cwd` (the default for `fs.writeFile`).
 
 #### options.cacheName
+
+Since: **v0.0.1**
 
 The name of the cache to write files to (default: "cache").
 
 #### options.preserveOrder
 
+Since: **v1.0.0**
+
 If the order of the files in the stream is important, you can pass `preserveOrder: true` to `remember`. Without this flag, the order of the files added to the stream largely depends on how long it takes to read them from disk, as they happen in parallel. With this flag, file order is _more_ reliable. I won't say guaranted because the order of keys in an object is theoretically not guaranteed (even though they're often predictable). This flag simply uses `async.eachOfSeries` instead of `async.eachOf`, so each key will be read from the cache and processed completely before the next key. Which does, at least, take _some_ of the uncertainty out of it.
+
+#### options.originalExtension
+
+Since: **v2.0.0**
+
+If the stream you're remembering changes extensions, you can pass originalExtension to make sure that forgetting the file (as well as cleaning up when it's deleted), works as expected.
+
+```js
+gulp.src('files/**/*.coffee')
+  // gulp-coffee changes the extension of files in the pipeline,
+  // so without "originalExtension" remember won't clean up after
+  // itself properly, and remember.forget('files/somefile.coffee')
+  // will do nothing as it will be cached with the ".js" extension.
+  .pipe(coffee())
+  .pipe(remember({ originalExtension: '.coffee' }))
+```
 
 ### remember.forget([cacheName], file, done)
 

@@ -5,7 +5,7 @@
   "main": "lib/gulp-remember-cache.js",
   "scripts": {
     "test": "gulp",
-    "travis": "grunt ci",
+    "travis": "gulp travis",
     "codeclimate": "codeclimate-test-reporter < coverage/unit/lcov-report/index.html"
   },
   "repository": {
@@ -32,7 +32,7 @@
     "url": "https://github.com/tandrewnichols/gulp-remember-cache/issues"
   },
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=6"
   },
   "homepage": "https://github.com/tandrewnichols/gulp-remember-cache",
   "dependencies": {
@@ -48,6 +48,7 @@
     "gulp": "github:gulpjs/gulp#4.0",
     "gulp-codeclimate-reporter": "^1.2.0",
     "gulp-eslint": "^4.0.0",
+    "gulp-ext-replace": "^0.3.0",
     "gulp-file-cache": "0.0.1",
     "gulp-footer": "^1.0.5",
     "gulp-header": "^1.8.9",

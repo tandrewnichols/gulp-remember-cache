@@ -10,6 +10,7 @@ const cache = new FileCache()
 const read = require('gulp-read');
 const touch = require('touch');
 const merge = require('merge2');
+const ext = require('gulp-ext-replace');
 
 const utf8 = { encoding: 'utf8' };
 
@@ -18,6 +19,15 @@ describe('gulp-remember-cache', () => {
 
   const getManifest = () => JSON.parse(fs.readFileSync(`${root}/.gulp-remember-cache.json`));
 
+  const tryRead = (file) => {
+    try {
+      fs.readFileSync(file, utf8);
+      return null;
+    } catch (e) {
+      return e;
+    }
+  };
+
   describe('remember()', () => {
     context('on the first pass', () => {
       context('using the library defaults', () => {
@@ -25,16 +35,16 @@ describe('gulp-remember-cache', () => {
           fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
             remember.resetAll(done);
           });
-        });
+        })
 
         beforeEach((done) => {
-          gulp.src(`${__dirname}/fixtures/**/*`)
+          gulp.src(`${__dirname}/fixtures/**/*.js`)
             .pipe(header(';(function() { '))
             .pipe(footer(' })();'))
             .pipe(remember())
             .pipe(assert.length(2))
             .pipe(assert.end(done));
-        });
+        })
 
         it('should write files to dest', () => {
           let manifest = getManifest();
@@ -43,26 +53,32 @@ describe('gulp-remember-cache', () => {
 
           apple.should.eql(';(function() { let apple;\n })();');
           banana.should.eql(';(function() { let banana;\n })();');
-          manifest.cache['apple.js'].should.eql(`${root}/out/apple.js`);
-          manifest.cache['banana.js'].should.eql(`${root}/out/banana.js`);
-        });
-      });
+          manifest.cache['apple.js'].should.eql({
+            cache: `${root}/out/apple.js`,
+            orig: path.resolve('test/fixtures/apple.js')
+          });
+          manifest.cache['banana.js'].should.eql({
+            cache: `${root}/out/banana.js`,
+            orig: path.resolve('test/fixtures/banana.js')
+          });
+        })
+      })
 
       context('passing in options', () => {
         afterEach((done) => {
           fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
             remember.resetAll(done);
           });
-        });
+        })
 
         beforeEach((done) => {
-          gulp.src(`${__dirname}/fixtures/**/*`)
+          gulp.src(`${__dirname}/fixtures/**/*.js`)
             .pipe(header(';(function() { '))
             .pipe(footer(' })();'))
             .pipe(remember({ dest: 'test/out/', cacheName: 'fruits' }))
             .pipe(assert.length(2))
             .pipe(assert.end(done));
-        });
+        })
 
         it('should write files to dest', () => {
           let manifest = getManifest();
@@ -71,11 +87,55 @@ describe('gulp-remember-cache', () => {
 
           apple.should.eql(';(function() { let apple;\n })();');
           banana.should.eql(';(function() { let banana;\n })();');
-          manifest.fruits['apple.js'].should.eql(path.resolve('test/out/apple.js'));
-          manifest.fruits['banana.js'].should.eql(path.resolve('test/out/banana.js'));
-        });
-      });
-    });
+          manifest.fruits['apple.js'].should.eql({
+            cache: path.resolve('test/out/apple.js'),
+            orig: path.resolve('test/fixtures/apple.js')
+          });
+          manifest.fruits['banana.js'].should.eql({
+            cache: path.resolve('test/out/banana.js'),
+            orig: path.resolve('test/fixtures/banana.js')
+          });
+        })
+      })
+
+      context('preserving original extension', () => {
+        afterEach((done) => {
+          fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+            remember.resetAll(done);
+          });
+        })
+
+        beforeEach((done) => {
+          let run = (f) => {
+            return gulp.src(`${__dirname}/fixtures/**/*.ts`)
+              .pipe(header(';(function() { '))
+              .pipe(footer(f))
+              .pipe(ext('.js'))
+              .pipe(remember({ originalExtension: '.ts' }))
+              .pipe(assert.length(1));
+          };
+
+          let stream = run(' })();');
+          touch(`${__dirname}/fixtures/kiwi.ts`, () => {
+            stream.resume();
+            stream.on('end', () => {
+              run(' })(undefined);').pipe(assert.end(done));
+            });
+          });
+        })
+
+        it('should write files to dest', () => {
+          let manifest = getManifest();
+          let kiwi = fs.readFileSync(`${root}/out/kiwi.js`, utf8);
+
+          kiwi.should.eql(';(function() { let kiwi;\n })(undefined);');
+          manifest.cache['kiwi.ts'].should.eql({
+            cache: path.resolve(`${root}/out/kiwi.js`),
+            orig: path.resolve('test/fixtures/kiwi.ts')
+          });
+        })
+      })
+    })
 
     context('on second passes', () => {
       afterEach((done) => {
@@ -85,13 +145,13 @@ describe('gulp-remember-cache', () => {
         ]).then(() => {
           remember.resetAll(done);
         });
-      });
+      })
 
       beforeEach((done) => {
-        let run = (expectedFiles) => {
-          return gulp.src(`${__dirname}/fixtures/**/*`, { read: false })
+        let run = (count) => {
+          return gulp.src(`${__dirname}/fixtures/**/*.js`, { read: false })
             .pipe(cache.filter())
-            .pipe(assert.length(expectedFiles))
+            .pipe(assert.length(count))
             .pipe(read())
             .pipe(header(';(function() { '))
             .pipe(footer(' })();'))
@@ -109,7 +169,7 @@ describe('gulp-remember-cache', () => {
             run(1).pipe(assert.end(done));
           });
         });
-      });
+      })
 
       it('should write files to dest', () => {
         let manifest = getManifest();
@@ -118,120 +178,347 @@ describe('gulp-remember-cache', () => {
 
         apple.should.eql(';(function() { let apple;\n })();');
         banana.should.eql(';(function() { let banana;\n })();');
-        manifest.fruits['apple.js'].should.eql(path.resolve('test/out/apple.js'));
-        manifest.fruits['banana.js'].should.eql(path.resolve('test/out/banana.js'));
-      });
+        manifest.fruits['apple.js'].should.eql({
+          cache: path.resolve('test/out/apple.js'),
+          orig: path.resolve('test/fixtures/apple.js')
+        });
+        manifest.fruits['banana.js'].should.eql({
+          cache: path.resolve('test/out/banana.js'),
+          orig: path.resolve('test/fixtures/banana.js')
+        });
+      })
     })
-  });
+
+    context('when the file is deleted', () => {
+      let kiwi;
+
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(() => {
+            fs.outputFile(`${__dirname}/fixtures/kiwi.ts`, kiwi, utf8, () => done());
+          })
+        });
+      })
+
+      beforeEach(() => {
+        kiwi = fs.readFileSync(`${__dirname}/fixtures/kiwi.ts`, utf8);
+      })
+
+      const run = (count) => {
+        return gulp.src(`${__dirname}/fixtures/**/*.ts`)
+          .pipe(header(';(function() { '))
+          .pipe(footer(' })();'))
+          .pipe(ext('.js'))
+          .pipe(remember({ originalExtension: '.ts' }))
+          .pipe(assert.length(count))
+      };
+
+      beforeEach((done) => {
+        run(1).pipe(assert.end(done));
+      })
+
+      beforeEach((done) => {
+        fs.remove(`${__dirname}/fixtures/kiwi.ts`, () => {
+          run(0).pipe(assert.end(done));
+        });
+      })
+
+      it('should clean up the deleted file', () => {
+        let manifest = getManifest();
+
+        tryRead(`${__dirname}/fixtures/kiwi.ts`).message.should.match(/ENOENT/);
+        tryRead(`${root}/out/kiwi.js`).message.should.match(/ENOENT/);
+
+        (manifest.cache['kiwi.ts'] === undefined).should.be.true()
+      })
+    })
+
+    context('when the file has no contents', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
+
+      beforeEach((done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.js`, { read: false })
+          .pipe(remember())
+          .pipe(assert.length(2))
+          .pipe(assert.end(done));
+      })
+
+      it('should pass the files on without doing anything', () => {
+        let manifest = getManifest();
+        manifest.cache.should.eql({
+          dest: `${root}/out`,
+          'banana.js': {
+            cache: `${root}/out/banana.js`,
+            orig: path.resolve('test/fixtures/banana.js')
+          },
+         'apple.js': {
+            cache: `${root}/out/apple.js`,
+            orig: path.resolve('test/fixtures/apple.js')
+          }
+        });
+
+        tryRead(`${root}/out/apple.js`).message.should.match(/ENOENT/);
+        tryRead(`${root}/out/banana.js`).message.should.match(/ENOENT/);
+      })
+    })
+  })
 
   describe('remember.forget()', () => {
-    afterEach((done) => {
-      fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-        remember.resetAll(done);
-      });
-    });
+    context('with the default cacheName', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
 
-    beforeEach((done) => {
-      gulp.src(`${__dirname}/fixtures/**/*`)
-        .pipe(header(';(function() { '))
-        .pipe(footer(' })();'))
-        .pipe(remember())
-        .pipe(assert.length(2))
-        .pipe(assert.end(done));
-    });
+      beforeEach((done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.js`)
+          .pipe(header(';(function() { '))
+          .pipe(footer(' })();'))
+          .pipe(remember())
+          .pipe(assert.end(done));
+      })
 
-    beforeEach((done) => {
-      remember.forget('apple.js', done);
-    });
+      beforeEach((done) => {
+        remember.forget('apple.js', done);
+      })
 
-    it('should remove the file from the manifest', () => {
-      let manifest = getManifest();
-      (manifest['apple.js'] === undefined).should.be.true();
-    });
+      it('should remove the file from the manifest', () => {
+        let manifest = getManifest();
+        (manifest.cache['apple.js'] === undefined).should.be.true();
+      })
 
-    it('should remove the file from disk', () => {
-      try {
-        let apple = fs.readFileSync(`${root}/out/apple.js`, utf8);
-      } catch (e) {
-        e.message.should.match(/ENOENT/);
-      }
-    });
-  });
+      it('should remove the file from disk', () => {
+        tryRead(`${root}/out/apple.js`).message.should.match(/ENOENT/);
+      })
+    })
+
+    context('with a named cache', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
+
+      beforeEach((done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.js`)
+          .pipe(header(';(function() { '))
+          .pipe(footer(' })();'))
+          .pipe(remember({ cacheName: 'fruits' }))
+          .pipe(assert.end(done));
+      })
+
+      beforeEach((done) => {
+        remember.forget('fruits', 'apple.js', done);
+      })
+
+      it('should remove the file from the manifest', () => {
+        let manifest = getManifest();
+        (manifest.fruits['apple.js'] === undefined).should.be.true();
+      })
+
+      it('should remove the file from disk', () => {
+        tryRead(`${root}/out/apple.js`).message.should.match(/ENOENT/);
+      })
+    })
+
+    context('with a named cache that does not exist', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
+
+      beforeEach((done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.js`)
+          .pipe(header(';(function() { '))
+          .pipe(footer(' })();'))
+          .pipe(remember({ cacheName: 'fruits' }))
+          .pipe(assert.end(done));
+      })
+
+      beforeEach((done) => {
+        remember.forget('fruit', 'apple.js', done);
+      })
+
+      it('should call done immediately', () => {
+        let manifest = getManifest();
+        manifest.should.eql({
+          fruits: {
+            dest: `${root}/out`,
+            'apple.js': {
+              cache: `${root}/out/apple.js`,
+              orig: path.resolve('test/fixtures/apple.js')
+            },
+            'banana.js': {
+              cache: `${root}/out/banana.js`,
+              orig: path.resolve('test/fixtures/banana.js')
+            }
+          }
+        });
+      })
+    })
+
+    context('with a different extension', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
+
+      beforeEach((done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.ts`)
+          .pipe(ext('.js'))
+          .pipe(remember({ originalExtension: '.ts' }))
+          .pipe(assert.end(done));
+      })
+
+      beforeEach((done) => {
+        remember.forget('kiwi.ts', done);
+      })
+
+      it('should remove the file from the manifest', () => {
+        let manifest = getManifest();
+        (manifest.cache['kiwi.ts'] === undefined).should.be.true();
+      })
+
+      it('should remove the file from disk', () => {
+        tryRead(`${root}/out/kiwi.js`).message.should.match(/ENOENT/);
+      })
+    })
+  })
 
   describe('remember.reset()', () => {
-    afterEach((done) => {
-      fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-        remember.resetAll(done);
-      });
-    });
+    context('with the default cache', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
 
-    beforeEach((done) => {
-      gulp.src(`${__dirname}/fixtures/**/*`)
-        .pipe(header(';(function() { '))
-        .pipe(footer(' })();'))
-        .pipe(remember({ cacheName: 'fruits' }))
-        .pipe(assert.length(2))
-        .pipe(assert.end(done));
-    });
+      beforeEach((done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.js`)
+          .pipe(header(';(function() { '))
+          .pipe(footer(' })();'))
+          .pipe(remember())
+          .pipe(assert.end(done));
+      })
 
-    beforeEach((done) => {
-      remember.reset('fruits', done);
-    });
+      beforeEach((done) => {
+        remember.reset(done);
+      })
 
-    it('should remove the cache from the manifest', () => {
-      let manifest = getManifest();
-      manifest.should.eql({});
-    });
+      it('should remove the cache from the manifest', () => {
+        let manifest = getManifest();
+        manifest.should.eql({});
+      })
 
-    it('should remove the files in the cache from disk', () => {
-      try {
-        let out = fs.readFileSync(`${root}/out/`, utf8);
-      } catch (e) {
-        e.message.should.match(/ENOENT/);
-      }
+      it('should remove the files in the cache from disk', () => {
+        tryRead(`${root}/out/`).message.should.match(/ENOENT/);
+      })
     })
-  });
+
+    context('with a named cache', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
+
+      beforeEach((done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.js`)
+          .pipe(header(';(function() { '))
+          .pipe(footer(' })();'))
+          .pipe(remember({ cacheName: 'fruits' }))
+          .pipe(assert.end(done));
+      })
+
+      beforeEach((done) => {
+        remember.reset('fruits', done);
+      })
+
+      it('should remove the cache from the manifest', () => {
+        let manifest = getManifest();
+        manifest.should.eql({});
+      })
+
+      it('should remove the files in the cache from disk', () => {
+        tryRead(`${root}/out/`).message.should.match(/ENOENT/);
+      })
+    })
+
+    context('with a named cache that does not exist', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
+
+      beforeEach((done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.js`)
+          .pipe(header(';(function() { '))
+          .pipe(footer(' })();'))
+          .pipe(remember({ cacheName: 'fruits' }))
+          .pipe(assert.end(done));
+      })
+
+      beforeEach((done) => {
+        remember.reset('fruit', done);
+      })
+
+      it('should call done immediately', () => {
+        let manifest = getManifest();
+        manifest.should.eql({
+          fruits: {
+            dest: `${root}/out`,
+            'apple.js': {
+              cache: `${root}/out/apple.js`,
+              orig: path.resolve('test/fixtures/apple.js')
+            },
+            'banana.js': {
+              cache: `${root}/out/banana.js`,
+              orig: path.resolve('test/fixtures/banana.js')
+            }
+          }
+        });
+      })
+    })
+  })
 
   describe('remember.resetAll()', () => {
     afterEach(() => {
       return fs.remove(`${root}/.gulp-remember-cache.json`);
-    });
+    })
 
     beforeEach((done) => {
       merge(
-        gulp.src(`${__dirname}/fixtures/**/*`)
+        gulp.src(`${__dirname}/fixtures/**/*.js`)
           .pipe(header(';(function() { '))
           .pipe(footer(' })();'))
-          .pipe(remember({ cacheName: 'fruits', dest: `${root}/fruits/` }))
-          .pipe(assert.length(2)),
-        gulp.src(`${__dirname}/fixtures/**/*`)
+          .pipe(remember({ cacheName: 'fruits', dest: `${root}/fruits/` })),
+        gulp.src(`${__dirname}/fixtures/**/*.js`)
           .pipe(header(';(function() { '))
           .pipe(footer(' })();'))
           .pipe(remember({ cacheName: 'vegetables', dest: `${root}/vegetables/` }))
-          .pipe(assert.length(2))
       ).pipe(assert.end(done));
-    });
+    })
 
     beforeEach((done) => {
       remember.resetAll(done);
-    });
+    })
 
     it('should remove the cache from the manifest', () => {
       let manifest = getManifest();
       manifest.should.eql({});
-    });
+    })
 
     it('should remove the files in the cache from disk', () => {
-      try {
-        let fruits = fs.readFileSync(`${root}/fruits/`, utf8);
-      } catch (e) {
-        e.message.should.match(/ENOENT/);
-        try {
-          let vegetables = fs.readFileSync(`${root}/vegetables/`, utf8);
-        } catch (e) {
-          e.message.should.match(/ENOENT/);
-        }
-      }
-    });
+      tryRead(`${root}/fruits/`).message.should.match(/ENOENT/);
+      tryRead(`${root}/vegetables/`).message.should.match(/ENOENT/);
+    })
   })
-});
+})
