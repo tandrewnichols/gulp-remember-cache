@@ -97,44 +97,6 @@ describe('gulp-remember-cache', () => {
           });
         })
       })
-
-      context('preserving original extension', () => {
-        afterEach((done) => {
-          fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-            remember.resetAll(done);
-          });
-        })
-
-        beforeEach((done) => {
-          let run = (f) => {
-            return gulp.src(`${__dirname}/fixtures/**/*.ts`)
-              .pipe(header(';(function() { '))
-              .pipe(footer(f))
-              .pipe(ext('.js'))
-              .pipe(remember({ originalExtension: '.ts' }))
-              .pipe(assert.length(1));
-          };
-
-          let stream = run(' })();');
-          touch(`${__dirname}/fixtures/kiwi.ts`, () => {
-            stream.resume();
-            stream.on('end', () => {
-              run(' })(undefined);').pipe(assert.end(done));
-            });
-          });
-        })
-
-        it('should write files to dest', () => {
-          let manifest = getManifest();
-          let kiwi = fs.readFileSync(`${root}/out/kiwi.js`, utf8);
-
-          kiwi.should.eql(';(function() { let kiwi;\n })(undefined);');
-          manifest.cache['kiwi.ts'].should.eql({
-            cache: path.resolve(`${root}/out/kiwi.js`),
-            orig: path.resolve('test/fixtures/kiwi.ts')
-          });
-        })
-      })
     })
 
     context('on second passes', () => {
@@ -185,6 +147,83 @@ describe('gulp-remember-cache', () => {
         manifest.fruits['banana.js'].should.eql({
           cache: path.resolve('test/out/banana.js'),
           orig: path.resolve('test/fixtures/banana.js')
+        });
+      })
+    })
+
+    context('with preserveOrder', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
+
+      it('should preserve the order of the files', (done) => {
+        let run = () => {
+          return gulp.src(`${__dirname}/fixtures/**/*.js`)
+            .pipe(header(';(function() { '))
+            .pipe(footer(' })();'))
+            .pipe(ext('.js'))
+            .pipe(remember({ preserveOrder: true }))
+            .pipe(assert.length(2));
+        };
+
+        let stream = run();
+        touch(`${__dirname}/fixtures/apple.js`, () => {
+          stream.resume();
+          stream.on('end', () => {
+            stream = run()
+              .pipe(assert.first((file) => file.relative === 'apple.js'))
+              .pipe(assert.second((file) => file.relative === 'banana.js'))
+
+            touch(`${__dirname}/fixtures/banana.js`, () => {
+              stream.resume();
+              stream.on('end', () => {
+                run()
+                  .pipe(assert.first((file) => file.relative === 'apple.js'))
+                  .pipe(assert.second((file) => file.relative === 'banana.js'))
+                  .pipe(assert.end(done))
+              });
+            });
+          });
+        });
+      })
+    })
+
+    context('preserving original extension', () => {
+      afterEach((done) => {
+        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
+          remember.resetAll(done);
+        });
+      })
+
+      beforeEach((done) => {
+        let run = (f) => {
+          return gulp.src(`${__dirname}/fixtures/**/*.ts`)
+            .pipe(header(';(function() { '))
+            .pipe(footer(f))
+            .pipe(ext('.js'))
+            .pipe(remember({ originalExtension: '.ts' }))
+            .pipe(assert.length(1));
+        };
+
+        let stream = run(' })();');
+        touch(`${__dirname}/fixtures/kiwi.ts`, () => {
+          stream.resume();
+          stream.on('end', () => {
+            run(' })(undefined);').pipe(assert.end(done));
+          });
+        });
+      })
+
+      it('should write files to dest', () => {
+        let manifest = getManifest();
+        let kiwi = fs.readFileSync(`${root}/out/kiwi.js`, utf8);
+
+        kiwi.should.eql(';(function() { let kiwi;\n })(undefined);');
+        manifest.cache['kiwi.ts'].should.eql({
+          cache: path.resolve(`${root}/out/kiwi.js`),
+          orig: path.resolve('test/fixtures/kiwi.ts')
         });
       })
     })
