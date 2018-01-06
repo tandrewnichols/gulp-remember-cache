@@ -46,7 +46,7 @@
     "execa": "^0.8.0",
     "file-manifest": "^2.0.4",
     "gulp": "github:gulpjs/gulp#4.0",
-    "gulp-codeclimate-reporter": "^1.2.0",
+    "gulp-codeclimate-reporter": "github:tandrewnichols/gulp-codeclimate-reporter",
     "gulp-eslint": "^4.0.0",
     "gulp-ext-replace": "^0.3.0",
     "gulp-file-cache": "0.0.1",

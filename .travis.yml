@@ -1,5 +1,8 @@
 language: node_js
 sudo: false
+addons:
+  code_climate:
+    repo_token: 'e7d897b341e458ed1c6fde47d4c1f314a237d9f83d7fa990dff7ba1c14147cea'
 env:
   - CXX=g++-4.8
 install:
