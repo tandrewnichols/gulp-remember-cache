@@ -1,3 +1,4 @@
+version: "2"
 plugins:
   eslint:
     enabled: true
@@ -5,16 +6,21 @@ plugins:
     config:
       config: '.eslint.json'
   duplication:
-    enabled: false
+    enabled: true
     config:
       languages:
         - javascript
+checks:
+  method-lines:
+    config:
+      threshold: 40
 exclude_patterns:
   - ".*.*"
   - "dist/**.js"
   - "gulp/**.js"
   - "test/**.js"
-  - "test/fixtures/**.js"
+  - "test/fixtures/**.*"
+  - "test/helpers/**.js"
   - "*.json"
   - ".gitignore"
   - "**.md"

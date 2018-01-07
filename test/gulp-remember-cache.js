@@ -1,6 +1,6 @@
 const assert = require('stream-assert');
 const gulp = require('gulp');
-const header = require('gulp-header');
+const header = require('./helpers/header');
 const footer = require('gulp-footer');
 const fs = require('fs-extra');
 const path = require('path');
@@ -11,6 +11,10 @@ const read = require('gulp-read');
 const touch = require('touch');
 const merge = require('merge2');
 const ext = require('gulp-ext-replace');
+const concat = require('gulp-concat');
+const sourcemaps = require('gulp-sourcemaps');
+const async = require('async');
+const through = require('through2');
 
 const utf8 = { encoding: 'utf8' };
 
@@ -28,15 +32,16 @@ describe('gulp-remember-cache', () => {
     }
   };
 
+  afterEach((done) => {
+    cache.clear();
+    remember.resetAll(() => {
+      async.each([`${root}/.gulp-remember-cache.json`, `${root}/.gulp-cache`], fs.remove, () => done());
+    });
+  })
+
   describe('remember()', () => {
     context('on the first pass', () => {
       context('using the library defaults', () => {
-        afterEach((done) => {
-          fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-            remember.resetAll(done);
-          });
-        })
-
         beforeEach((done) => {
           gulp.src(`${__dirname}/fixtures/**/*.js`)
             .pipe(header(';(function() { '))
@@ -65,12 +70,6 @@ describe('gulp-remember-cache', () => {
       })
 
       context('passing in options', () => {
-        afterEach((done) => {
-          fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-            remember.resetAll(done);
-          });
-        })
-
         beforeEach((done) => {
           gulp.src(`${__dirname}/fixtures/**/*.js`)
             .pipe(header(';(function() { '))
@@ -100,36 +99,28 @@ describe('gulp-remember-cache', () => {
     })
 
     context('on second passes', () => {
-      afterEach((done) => {
-        Promise.all([
-          fs.remove(`${root}/.gulp-remember-cache.json`),
-          fs.remove('./.gulp-cache')
-        ]).then(() => {
-          remember.resetAll(done);
-        });
-      })
+      let run = (count) => {
+        return gulp.src(`${__dirname}/fixtures/**/*.js`, { read: false })
+          .pipe(cache.filter())
+          .pipe(assert.length(count))
+          .pipe(read())
+          .pipe(header(';(function() { '))
+          .pipe(footer(' })();'))
+          .pipe(cache.cache())
+          .pipe(remember({ dest: 'test/out/', cacheName: 'fruits' }))
+          .pipe(assert.length(2))
+          .pipe(assert.second((file) => {
+            file.contents.toString().should.eql(';(function() { let banana;\n })();');
+          }));
+      };
 
       beforeEach((done) => {
-        let run = (count) => {
-          return gulp.src(`${__dirname}/fixtures/**/*.js`, { read: false })
-            .pipe(cache.filter())
-            .pipe(assert.length(count))
-            .pipe(read())
-            .pipe(header(';(function() { '))
-            .pipe(footer(' })();'))
-            .pipe(cache.cache())
-            .pipe(remember({ dest: 'test/out/', cacheName: 'fruits' }))
-            .pipe(assert.length(2))
-            .pipe(assert.second((file) => {
-              file.contents.toString().should.eql(';(function() { let banana;\n })();');
-            }));
-        };
-        let stream = run(2);
+        run(2).pipe(assert.end(done));
+      });
+
+      beforeEach((done) => {
         touch(`${__dirname}/fixtures/apple.js`, () => {
-          stream.resume();
-          stream.on('end', () => {
-            run(1).pipe(assert.end(done));
-          });
+          run(1).pipe(assert.end(done));
         });
       })
 
@@ -152,18 +143,14 @@ describe('gulp-remember-cache', () => {
     })
 
     context('with preserveOrder', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       it('should preserve the order of the files', (done) => {
         let run = () => {
           return gulp.src(`${__dirname}/fixtures/**/*.js`)
+            .pipe(cache.filter())
             .pipe(header(';(function() { '))
             .pipe(footer(' })();'))
             .pipe(ext('.js'))
+            .pipe(cache.cache())
             .pipe(remember({ preserveOrder: true }))
             .pipe(assert.length(2));
         };
@@ -191,18 +178,14 @@ describe('gulp-remember-cache', () => {
     })
 
     context('preserving original extension', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       beforeEach((done) => {
         let run = (f) => {
           return gulp.src(`${__dirname}/fixtures/**/*.ts`)
+            .pipe(cache.filter())
             .pipe(header(';(function() { '))
             .pipe(footer(f))
             .pipe(ext('.js'))
+            .pipe(cache.cache())
             .pipe(remember({ originalExtension: '.ts' }))
             .pipe(assert.length(1));
         };
@@ -231,12 +214,8 @@ describe('gulp-remember-cache', () => {
     context('when the file is deleted', () => {
       let kiwi;
 
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(() => {
-            fs.outputFile(`${__dirname}/fixtures/kiwi.ts`, kiwi, utf8, () => done());
-          })
-        });
+      afterEach(() => {
+        return fs.outputFile(`${__dirname}/fixtures/kiwi.ts`, kiwi, utf8);
       })
 
       beforeEach(() => {
@@ -245,9 +224,11 @@ describe('gulp-remember-cache', () => {
 
       const run = (count) => {
         return gulp.src(`${__dirname}/fixtures/**/*.ts`)
+          .pipe(cache.filter())
           .pipe(header(';(function() { '))
           .pipe(footer(' })();'))
           .pipe(ext('.js'))
+          .pipe(cache.cache())
           .pipe(remember({ originalExtension: '.ts' }))
           .pipe(assert.length(count))
       };
@@ -273,12 +254,6 @@ describe('gulp-remember-cache', () => {
     })
 
     context('when the file has no contents', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       beforeEach((done) => {
         gulp.src(`${__dirname}/fixtures/**/*.js`, { read: false })
           .pipe(remember())
@@ -288,32 +263,69 @@ describe('gulp-remember-cache', () => {
 
       it('should pass the files on without doing anything', () => {
         let manifest = getManifest();
-        manifest.cache.should.eql({
-          dest: `${root}/out`,
-          'banana.js': {
-            cache: `${root}/out/banana.js`,
-            orig: path.resolve('test/fixtures/banana.js')
-          },
-         'apple.js': {
-            cache: `${root}/out/apple.js`,
-            orig: path.resolve('test/fixtures/apple.js')
-          }
-        });
+        manifest.cache.should.eql({ dest: `${root}/out` });
 
         tryRead(`${root}/out/apple.js`).message.should.match(/ENOENT/);
         tryRead(`${root}/out/banana.js`).message.should.match(/ENOENT/);
+      })
+    })
+
+    context('with sourcemaps', () => {
+      afterEach(() => {
+        return fs.remove(`${__dirname}/dest/`);
+      })
+
+      const run = (count) => {
+        return gulp.src(`${__dirname}/fixtures/**/*.js`)
+          .pipe(cache.filter())
+          .pipe(sourcemaps.init())
+          .pipe(cache.cache())
+          .pipe(remember())
+          .pipe(assert.first((file) => {
+            return file.sourceMap.sources === ['apple.js'];
+          }))
+          .pipe(assert.second((file) => {
+            return file.sourceMap.sources === ['banana.js'];
+          }))
+          .pipe(concat('fruits.js'))
+          .pipe(sourcemaps.write('./'))
+          .pipe(gulp.dest('test/dest/'))
+      };
+
+      beforeEach((done) => {
+        run().pipe(assert.end(done));
+      })
+
+      beforeEach((done) => {
+        touch(`${__dirname}/fixtures/apple.js`, () => {
+          run().pipe(assert.end(done));
+        });
+      })
+
+      it('should correctly write sourcemaps', () => {
+        let fruits = fs.readFileSync(`${__dirname}/dest/fruits.js`, utf8);
+        fruits.should.match(/sourceMappingURL=fruits\.js\.map/);
+
+        let map = JSON.parse(fs.readFileSync(`${__dirname}/dest/fruits.js.map`, utf8));
+        map.sources.should.eql(['apple.js', 'banana.js']);
+      })
+    })
+
+    context('with a file stream', () => {
+      it('should throw an error', (done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.js`, { buffer: false })
+          .pipe(remember())
+          .on('error', (e) => {
+            e.plugin.should.eql('gulp-remember-cache');
+            e.message.should.eql('Stream content is not supported');
+            done();
+          })
       })
     })
   })
 
   describe('remember.forget()', () => {
     context('with the default cacheName', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       beforeEach((done) => {
         gulp.src(`${__dirname}/fixtures/**/*.js`)
           .pipe(header(';(function() { '))
@@ -337,12 +349,6 @@ describe('gulp-remember-cache', () => {
     })
 
     context('with a named cache', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       beforeEach((done) => {
         gulp.src(`${__dirname}/fixtures/**/*.js`)
           .pipe(header(';(function() { '))
@@ -366,12 +372,6 @@ describe('gulp-remember-cache', () => {
     })
 
     context('with a named cache that does not exist', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       beforeEach((done) => {
         gulp.src(`${__dirname}/fixtures/**/*.js`)
           .pipe(header(';(function() { '))
@@ -403,12 +403,6 @@ describe('gulp-remember-cache', () => {
     })
 
     context('with a different extension', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       beforeEach((done) => {
         gulp.src(`${__dirname}/fixtures/**/*.ts`)
           .pipe(ext('.js'))
@@ -433,12 +427,6 @@ describe('gulp-remember-cache', () => {
 
   describe('remember.reset()', () => {
     context('with the default cache', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       beforeEach((done) => {
         gulp.src(`${__dirname}/fixtures/**/*.js`)
           .pipe(header(';(function() { '))
@@ -462,12 +450,6 @@ describe('gulp-remember-cache', () => {
     })
 
     context('with a named cache', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       beforeEach((done) => {
         gulp.src(`${__dirname}/fixtures/**/*.js`)
           .pipe(header(';(function() { '))
@@ -491,12 +473,6 @@ describe('gulp-remember-cache', () => {
     })
 
     context('with a named cache that does not exist', () => {
-      afterEach((done) => {
-        fs.remove(`${root}/.gulp-remember-cache.json`).then(() => {
-          remember.resetAll(done);
-        });
-      })
-
       beforeEach((done) => {
         gulp.src(`${__dirname}/fixtures/**/*.js`)
           .pipe(header(';(function() { '))
@@ -529,10 +505,6 @@ describe('gulp-remember-cache', () => {
   })
 
   describe('remember.resetAll()', () => {
-    afterEach(() => {
-      return fs.remove(`${root}/.gulp-remember-cache.json`);
-    })
-
     beforeEach((done) => {
       merge(
         gulp.src(`${__dirname}/fixtures/**/*.js`)
