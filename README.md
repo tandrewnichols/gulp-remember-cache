@@ -122,7 +122,8 @@ const read = require('gulp-read');
 const babel = require('gulp-babel');
 const header = require('gulp-header');
 const footer = require('gulp-footer');
-const remember = require('gulp-remember-cache');
+const remember = require('gulp-remember');
+const rememberCache = require('gulp-remember-cache');
 const concat = require('gulp-concat');
 
 gulp.task('build', () => {
