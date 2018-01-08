@@ -12,6 +12,9 @@ A gulp-remember for on disk caching.
 
 I love the combination of `gulp-cached` and `gulp-remember`. These both use in-memory caching to speed up builds, but that means when you Ctrl-C your gulp process, you lose that cache, and the next time you start up gulp again, you have to pay the full cost of the build, even if some of your files haven't changed. There's a `gulp-file-cache` that does on-disk caching, but there's no analog to `gulp-remember` in that scenario, so I wrote this to fill that gap. You can pair it with `gulp-file-cache` the same way you can pair `gulp-cached` and `gulp-remember`. It also pairs well with `gulp-read` so you can skip the initial read, then read and process _only_ new/changed files, then pull in previously processed files without needing to recompile them.
 
+###### N.B.
+> As of version 2.2.0, this plugin supports sourcemap generation and caching.
+
 ## Usage
 
 ```javascript
@@ -136,9 +139,11 @@ gulp.task('build', () => {
     .pipe(footer('\n})();'))
     // Update the cache
     .pipe(cache.cache())
-    // Now remember any missing files from the compiled directory
-    // (and write any newly processed ones there)
-    .pipe(remember({ dest: 'generated/js/compiled/', cacheName: 'js' }))
+    // Use in-memory remember first to pull in any files filtered out earlier.
+    .pipe(remember())
+    // Now remember anything unchanged since the last restart. Pull in missing files
+    // from the compiled directory (and write any newly processed ones there)
+    .pipe(rememberCache({ dest: 'generated/js/compiled/', cacheName: 'js' }))
     // Concat the final result
     .pipe(concat('app.js'));
 });
@@ -154,13 +159,17 @@ Not any more expensive than reading the original source files. Theoretically it'
 
 There is a _slight_ overhead to writing the files to disk the first time, but this is more than paid back by not recompiling all your files over and over.
 
-#### Doesn't it need to read the compiled files from disk every time, even when the process is still running?
+#### Doesn't it need to read the compiled files from disk every time?
 
-Yes, but you _should_ be able to pair this plugin with the in-memory `gulp-remember` to get the best of both worlds. This is untested, but I expect that putting `gulp-remember` in the flow just before `gulp-remember-cache` should be sufficient to skip the read of compiled files when the process is long running.
+Yes and no. You can and _should_  pair this plugin with the in-memory `gulp-remember` to get the best of both worlds. In this case, you'll only need to read compiled files when you start up a gulp process. After that (assuming you are using `watch()`), `gulp-remember` will handle it for you.
 
 #### Isn't writing intermediate files more of a grunt thing?
 
 Yeah, typically, but besides speeding up rebuilds, I also appreciate that this gives me a way to _look at_ the compiled source if necessary.
+
+#### How can I do sourcemaps with this? Won't the sourcemaps only contain the newer files?
+
+If you update to version >=2.2.0, sourcemaps will \*just work\*. `gulp-remember-cache` will write any mapped sources to a file as well and then reattach them when it reads the compiled files.
 
 ## Contributing
 
