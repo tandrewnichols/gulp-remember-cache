@@ -21,8 +21,9 @@ const utf8 = { encoding: 'utf8' };
 describe('gulp-remember-cache', () => {
   const remember = require('../lib/gulp-remember-cache');
 
+  // Some helper methods
+  const cleanup = () => Object.keys(remember.cache).forEach((k) => delete remember.cache[k]);
   const getManifest = () => JSON.parse(fs.readFileSync(`${root}/.gulp-remember-cache.json`));
-
   const tryRead = (file) => {
     try {
       fs.readFileSync(file, utf8);
@@ -119,6 +120,7 @@ describe('gulp-remember-cache', () => {
       });
 
       beforeEach((done) => {
+        cleanup();
         touch(`${__dirname}/fixtures/apple.js`, () => {
           run(1).pipe(assert.end(done));
         });
@@ -178,24 +180,25 @@ describe('gulp-remember-cache', () => {
     })
 
     context('preserving original extension', () => {
-      beforeEach((done) => {
-        let run = (f) => {
-          return gulp.src(`${__dirname}/fixtures/**/*.ts`)
-            .pipe(cache.filter())
-            .pipe(header(';(function() { '))
-            .pipe(footer(f))
-            .pipe(ext('.js'))
-            .pipe(cache.cache())
-            .pipe(remember({ originalExtension: '.ts' }))
-            .pipe(assert.length(1));
-        };
+      let run = (f) => {
+        return gulp.src(`${__dirname}/fixtures/**/*.ts`)
+          .pipe(cache.filter())
+          .pipe(header(';(function() { '))
+          .pipe(footer(f))
+          .pipe(ext('.js'))
+          .pipe(cache.cache())
+          .pipe(remember({ originalExtension: '.ts' }))
+          .pipe(assert.length(1));
+      };
 
-        let stream = run(' })();');
+      beforeEach((done) => {
+        run(' })();').pipe(assert.end(done));
+      })
+
+      beforeEach((done) => {
+        cleanup();
         touch(`${__dirname}/fixtures/kiwi.ts`, () => {
-          stream.resume();
-          stream.on('end', () => {
-            run(' })(undefined);').pipe(assert.end(done));
-          });
+          run(' })(undefined);').pipe(assert.end(done));
         });
       })
 
@@ -222,7 +225,7 @@ describe('gulp-remember-cache', () => {
         kiwi = fs.readFileSync(`${__dirname}/fixtures/kiwi.ts`, utf8);
       })
 
-      const run = (count) => {
+      let run = (count) => {
         return gulp.src(`${__dirname}/fixtures/**/*.ts`)
           .pipe(cache.filter())
           .pipe(header(';(function() { '))
@@ -275,7 +278,7 @@ describe('gulp-remember-cache', () => {
         return fs.remove(`${__dirname}/dest/`);
       })
 
-      const run = (count) => {
+      let run = (count) => {
         return gulp.src(`${__dirname}/fixtures/**/*.js`)
           .pipe(cache.filter())
           .pipe(sourcemaps.init())
@@ -297,6 +300,7 @@ describe('gulp-remember-cache', () => {
       })
 
       beforeEach((done) => {
+        cleanup();
         touch(`${__dirname}/fixtures/apple.js`, () => {
           run().pipe(assert.end(done));
         });

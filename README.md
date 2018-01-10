@@ -46,11 +46,25 @@ Since: **v0.0.1**
 
 The name of the cache to write files to (default: "cache").
 
-#### options.preserveOrder
+#### options.preserveOrder [deprecated]
 
 Since: **v1.0.0**
 
-If the order of the files in the stream is important, you can pass `preserveOrder: true` to `remember`. Without this flag, the order of the files added to the stream largely depends on how long it takes to read them from disk, as they happen in parallel. With this flag, file order is _more_ reliable. I won't say guaranted because the order of keys in an object is theoretically not guaranteed (even though they're often predictable). This flag simply uses `async.eachOfSeries` instead of `async.eachOf`, so each key will be read from the cache and processed completely before the next key. Which does, at least, take _some_ of the uncertainty out of it.
+If the order of the files in the stream is important, you can pass `preserveOrder: true` to `remember`. Without this flag, the order of the files added to the stream largely depends on how long it takes to read them from disk, as they happen in parallel. With this flag, file order is _more_ reliable, although changed files will always be at the front. I won't say guaranted because the order of keys in an object is theoretically not guaranteed (even though they're often predictable). This flag simply uses `async.eachOfSeries` instead of `async.eachOf`, so each key will be read from the cache and processed completely before the next key. Which does, at least, take _some_ of the uncertainty out of it.
+
+Deprecated in: **v3.0.0**
+
+This option is just not that reliable (and makes the process a bit slower). It's much better to simply include [gulp-order](https://www.npmjs.com/package/gulp-order) following this plugin instead:
+
+```js
+gulp.src('files/**')
+  .pipe(cache.filter())
+  // Do transformations here
+  .pipe(remember())
+  // If you pass the same glob here as to gulp.src,
+  // the order should be predictable
+  .pipe(order('files/**'))
+```
 
 #### options.originalExtension
 
@@ -122,8 +136,7 @@ const read = require('gulp-read');
 const babel = require('gulp-babel');
 const header = require('gulp-header');
 const footer = require('gulp-footer');
-const remember = require('gulp-remember');
-const rememberCache = require('gulp-remember-cache');
+const remember = require('gulp-remember-cache');
 const concat = require('gulp-concat');
 
 gulp.task('build', () => {
@@ -140,11 +153,9 @@ gulp.task('build', () => {
     .pipe(footer('\n})();'))
     // Update the cache
     .pipe(cache.cache())
-    // Use in-memory remember first to pull in any files filtered out earlier.
-    .pipe(remember())
     // Now remember anything unchanged since the last restart. Pull in missing files
     // from the compiled directory (and write any newly processed ones there)
-    .pipe(rememberCache({ dest: 'generated/js/compiled/', cacheName: 'js' }))
+    .pipe(remember({ dest: 'generated/js/compiled/', cacheName: 'js' }))
     // Concat the final result
     .pipe(concat('app.js'));
 });
@@ -162,7 +173,7 @@ There is a _slight_ overhead to writing the files to disk the first time, but th
 
 #### Doesn't it need to read the compiled files from disk every time?
 
-Yes and no. You can and _should_  pair this plugin with the in-memory `gulp-remember` to get the best of both worlds. In this case, you'll only need to read compiled files when you start up a gulp process. After that (assuming you are using `watch()`), `gulp-remember` will handle it for you.
+No. This plugin also incorporates in-memory caching the way that `gulp-remember` does, so it will only read compiled files when they're not already present in the stream, which means only when you restart your build pipeline.
 
 #### Isn't writing intermediate files more of a grunt thing?
 
