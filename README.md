@@ -82,6 +82,22 @@ gulp.src('files/**/*.coffee')
   .pipe(remember({ originalExtension: '.coffee' }))
 ```
 
+#### options.generated
+
+Since: **v3.1.0**
+
+Prior to version 3.1.0, if you tried to cache a generated file, it would never work because of the way this lib attempts to cleanup cached versions of files that no longer exist. I.e. You would save the cached version of the file, and then the cleanup mechanism would see that the original didn't exist (because there _is_ no single original file), and it would immediately delete it. Passing the generated flag basically tells this lib not to attempt to do cleanup on missing files, which lets you use this plugin after plugins like `gulp-concat`.
+
+E.g.
+
+```js
+gulp.src('files/**')
+  .pipe(concat('foo.js'))
+  // There is no files/foo.js so don't attempt to
+  // delete the cached version.
+  .pipe(remember({ generated: true })
+```
+
 ### remember.forget([cacheName], file, done)
 
 Remove a file from a cache and delete the temporary file from disk.

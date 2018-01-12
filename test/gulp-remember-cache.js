@@ -326,6 +326,19 @@ describe('gulp-remember-cache', () => {
           })
       })
     })
+
+    context('with the generated flag', () => {
+      beforeEach((done) => {
+        gulp.src(`${__dirname}/fixtures/**/*.js`)
+          .pipe(concat('foo.js'))
+          .pipe(remember({ generated: true }))
+          .pipe(assert.end(done))
+      })
+
+      it('should not clean up the file', () => {
+        fs.readFileSync(`${root}/out/foo.js`, utf8).should.not.throw();
+      })
+    })
   })
 
   describe('remember.forget()', () => {
